@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>일반 상식 퀴즈 게임</title>
+    <style>
+        /* CSS: 디자인 및 레이아웃 */
+        :root {
+            --primary-color: #4facfe;
+            --secondary-color: #00f2fe;
+            --bg-color: #f0f7f9;
+            --card-bg: #ffffff;
+            --text-color: #333;
+            --accent-color: #ff6b6b; /* 오답/생명 색상 */
+            --success-color: #51cf66; /* 정답 색상 */
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Pretendard', 'Malgun Gothic', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: var(--text-color);
+        }
+
+        /* 메인 컨테이너 (카드형 UI) */
+        .container {
+            background: var(--card-bg);
+            width: 90%;
+            max-width: 500px;
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        h1 {
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+            font-size: 1.8rem;
+        }
+
+        p.description {
+            margin-bottom: 2rem;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        /* 버튼 스타일 */
+        .btn {
+            display: inline-block;
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border: none;
+            border-radius: 10px;
+            background: var(--primary-color);
+            color: white;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            background: #3b82f6;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(79, 172, 254, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        /* 퀴즈 상단 정보 바 */
+        .quiz-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .lives {
+            color: var(--accent-color);
+        }
+
+        /* 문제 텍스트 */
+        .question-text {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 보기 버튼 */
+        .option-btn {
+            background: #f8f9fa;
+            color: #444;
+            border: 2px solid #e9ecef;
+            text-align: left;
+            padding-left: 20px;
+        }
+
+        .option-btn:hover {
+            background: #e7f5ff;
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .option-btn.correct {
+            background-color: var(--success-color) !important;
+            color: white !important;
+            border-color: var(--success-color);
+        }
+
+        .option-btn.wrong {
+            background-color: var(--accent-color) !important;
+            color: white !important;
+            border-color: var(--accent-color);
+        }
+
+        /* 결과/메시지 영역 */
+        #feedback {
+            margin-top: 15px;
+            font-weight: bold;
+            height: 24px;
+        }
+
+        /* 화면 전환 처리 */
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        /* 결과 등급 텍스트 */
+        .grade {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin: 20px 0;
+            color: var(--primary-color);
+        }
+
+        /* 반응형 대응 */
+        @media (max-width: 480px) {
+            .container {
+                width: 95%;
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- 1. 시작 화면 -->
+        <div id="start-screen" class="screen active">
+            <h1>일반 상식 퀴즈 게임</h1>
+            <p class="description">당신의 상식 레벨을 테스트해보세요!<br>10개의 문제를 모두 맞힐 수 있을까요?</p>
+            <button class="btn" onclick="startGame()">게임 시작하기</button>
+        </div>
+
+        <!-- 2. 퀴즈 화면 -->
+        <div id="quiz-screen" class="screen">
+            <div class="quiz-header">
+                <div>문제: <span id="current-idx">1</span> / 10</div>
+                <div>점수: <span id="current-score">0</span></div>
+                <div class="lives" id="lives-display">❤️❤️❤️</div>
+            </div>
+            
+            <div class="question-text" id="question">문제가 여기에 표시됩니다.</div>
+            
+            <div id="options-container">
+                <!-- 자바스크립트로 보기가 생성됨 -->
+            </div>
+
+            <div id="feedback"></div>
+            
+            <button id="next-btn" class="btn" style="display:none; background: #333;" onclick="loadNextQuestion()">다음 문제</button>
+        </div>
+
+        <!-- 3. 결과 화면 -->
+        <div id="result-screen" class="screen">
+            <h1>게임 종료!</h1>
+            <p>최종 점수: <span id="final-score">0</span> / 10</p>
+            <div class="grade" id="grade-text">평균 수준</div>
+            <button class="btn" onclick="restartGame()">다시 시작하기</button>
+        </div>
+    </div>
+
+    <script>
+        /* JavaScript: 게임 로직 */
+
+        // 퀴즈 데이터 (10문제)
+        const quizData = [
+            {
+                q: "대한민국의 수도는 어디인가요?",
+                a: ["부산", "인천", "서울", "대구"],
+                correct: 2
+            },
+            {
+                q: "태양계에서 가장 큰 행성은 무엇인가요?",
+                a: ["지구", "화성", "목성", "토성"],
+                correct: 2
+            },
+            {
+                q: "한글을 창제한 조선의 왕은?",
+                a: ["태조", "세종대왕", "영조", "정조"],
+                correct: 1
+            },
+            {
+                q: "물(H2O)의 화학 기호에서 'O'가 의미하는 원소는?",
+                a: ["질소", "수소", "산소", "탄소"],
+                correct: 2
+            },
+            {
+                q: "세계에서 가장 긴 강은 어디인가요?",
+                a: ["아마존강", "나일강", "한강", "미시시피강"],
+                correct: 1
+            },
+            {
+                q: "레오나르도 다 빈치가 그린 유명한 초상화는?",
+                a: ["별이 빛나는 밤", "절규", "진주 귀걸이를 한 소녀", "모나리자"],
+                correct: 3
+            },
+            {
+                q: "금(Gold)의 원소 기호는 무엇인가요?",
+                a: ["Ag", "Au", "Fe", "Cu"],
+                correct: 1
+            },
+            {
+                q: "144의 제곱근은 얼마인가요?",
+                a: ["10", "11", "12", "14"],
+                correct: 2
+            },
+            {
+                q: "셰익스피어의 4대 비극이 아닌 것은?",
+                a: ["햄릿", "맥베스", "오셀로", "파우스트"],
+                correct: 3
+            },
+            {
+                q: "최초의 하계 올림픽이 개최된 나라는?",
+                a: ["영국", "프랑스", "그리스", "미국"],
+                correct: 2
+            }
+        ];
+
+        let currentIdx = 0;
+        let score = 0;
+        let lives = 3;
+        let canClick = true; // 중복 클릭 방지
+
+        // 화면 전환 함수
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        // 게임 시작
+        function startGame() {
+            currentIdx = 0;
+            score = 0;
+            lives = 3;
+            updateUI();
+            showScreen('quiz-screen');
+            loadQuestion();
+        }
+
+        // 문제 불러오기
+        function loadQuestion() {
+            canClick = true;
+            const qData = quizData[currentIdx];
+            document.getElementById('question').innerText = qData.q;
+            document.getElementById('current-idx').innerText = currentIdx + 1;
+            document.getElementById('feedback').innerText = "";
+            document.getElementById('next-btn').style.display = "none";
+
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = "";
+
+            qData.a.forEach((text, i) => {
+                const btn = document.createElement('button');
+                btn.className = 'btn option-btn';
+                btn.innerText = `${i + 1}. ${text}`;
+                btn.onclick = () => checkAnswer(i);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        // 정답 체크
+        function checkAnswer(selectedIdx) {
+            if (!canClick) return;
+            canClick = false;
+
+            const qData = quizData[currentIdx];
+            const buttons = document.querySelectorAll('.option-btn');
+            const feedback = document.getElementById('feedback');
+
+            if (selectedIdx === qData.correct) {
+                // 정답일 때
+                buttons[selectedIdx].classList.add('correct');
+                score++;
+                feedback.innerText = "정답입니다! 👏";
+                feedback.style.color = "var(--success-color)";
+            } else {
+                // 오답일 때
+                buttons[selectedIdx].classList.add('wrong');
+                buttons[qData.correct].classList.add('correct'); // 정답 표시
+                lives--;
+                feedback.innerText = "오답입니다.. 😢";
+                feedback.style.color = "var(--accent-color)";
+            }
+
+            updateUI();
+
+            // 생명이 다했는지 확인
+            if (lives <= 0) {
+                setTimeout(() => {
+                    alert("생명을 모두 잃었습니다. 게임 종료!");
+                    endGame();
+                }, 1000);
+            } else {
+                document.getElementById('next-btn').style.display = "block";
+            }
+        }
+
+        // 다음 문제로 이동
+        function loadNextQuestion() {
+            currentIdx++;
+            if (currentIdx < quizData.length) {
+                loadQuestion();
+            } else {
+                endGame();
+            }
+        }
+
+        // UI 업데이트 (점수, 생명)
+        function updateUI() {
+            document.getElementById('current-score').innerText = score;
+            let heartIcons = "";
+            for (let i = 0; i < 3; i++) {
+                heartIcons += (i < lives) ? "❤️" : "🖤";
+            }
+            document.getElementById('lives-display').innerText = heartIcons;
+        }
+
+        // 게임 종료 및 결과 표시
+        function endGame() {
+            showScreen('result-screen');
+            document.getElementById('final-score').innerText = score;
+            
+            const gradeText = document.getElementById('grade-text');
+            if (score >= 9) {
+                gradeText.innerText = "🏆 상식 마스터";
+            } else if (score >= 7) {
+                gradeText.innerText = "🥇 상식 고수";
+            } else if (score >= 4) {
+                gradeText.innerText = "🥈 평균 수준";
+            } else {
+                gradeText.innerText = "🥉 상식 입문자";
+            }
+        }
+
+        // 게임 다시 시작
+        function restartGame() {
+            startGame();
+        }
+    </script>
+</body>
+</html>
